@@ -27,7 +27,8 @@ import java.io.IOException
 import javax.inject.Inject
 
 
-class RecordingActivity : DaggerAppCompatActivity(), View.OnClickListener, RecordingListAdapter.OnItemClickListener {
+class RecordingActivity : DaggerAppCompatActivity(), View.OnClickListener,
+    RecordingListAdapter.OnItemClickListener {
 
     private var TAG = RecordingActivity::class.java.simpleName
     @Inject
@@ -70,16 +71,12 @@ class RecordingActivity : DaggerAppCompatActivity(), View.OnClickListener, Recor
 
     }
 
-    override fun onStop() {
-        super.onStop()
-
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         mRecorder.release()
         mediaPlayer.release()
     }
+
     private fun recordAudio() {
         if (!isRecording) {
             isRecording = true
@@ -108,21 +105,24 @@ class RecordingActivity : DaggerAppCompatActivity(), View.OnClickListener, Recor
     }
 
     private fun uploadRecording() {
-        mRecordingViewModel.uploadFile(File(externalCacheDir?.absolutePath.toString() + "/recordingFile.mp3"))?.observe(this, Observer {
-            when (it) {
-                is ApiSuccessResponse -> {
-                    Log.d(TAG, it.body.toResponseModel(RecordingObject::class.java).media)
-                    mRecordingViewModel.saveToLocal(it.body.toResponseModel(RecordingObject::class.java)) {
-                        Log.d(TAG, "saved to local")
+        mRecordingViewModel.uploadFile(File(externalCacheDir?.absolutePath.toString() + "/recordingFile.mp3"))
+            ?.observe(this, Observer {
+                when (it) {
+                    is ApiSuccessResponse -> {
+                        var response = it.body.toResponseModel(RecordingObject::class.java)
+                        mRecordingViewModel.saveToLocal(response) {
+                            Toast.makeText(this, it.body.message, Toast.LENGTH_SHORT).show()
+                            Log.d(TAG, "saved to local")
+                        }
+                    }
+
+                    is ApiErrorResponse -> {
+                        Toast.makeText(this, it.errorMessage, Toast.LENGTH_SHORT).show()
+                        Log.d(TAG, it.errorMessage)
+
                     }
                 }
-
-                is ApiErrorResponse -> {
-                    Log.d(TAG, it.errorMessage)
-
-                }
-            }
-        })
+            })
     }
 
     private fun playAudio(url: String) {
@@ -148,12 +148,19 @@ class RecordingActivity : DaggerAppCompatActivity(), View.OnClickListener, Recor
     }
 
     private fun checkAudioPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
 
     }
 
     private fun requestPermission() {
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQ_AUDIO_PERMISSION)
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            REQ_AUDIO_PERMISSION
+        )
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, @NonNull permissions: Array<String>, @NonNull grantResults: IntArray) {
@@ -163,7 +170,8 @@ class RecordingActivity : DaggerAppCompatActivity(), View.OnClickListener, Recor
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 recordAudio()
             } else {
-                Toast.makeText(this, "Please allow permission to record audio", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please allow permission to record audio", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
 
